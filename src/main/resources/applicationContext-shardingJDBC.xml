@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                        http://www.springframework.org/schema/beans/spring-beans.xsd
+                        http://www.springframework.org/schema/tx
+                        http://www.springframework.org/schema/tx/spring-tx.xsd
+                        http://www.springframework.org/schema/context
+                        http://www.springframework.org/schema/context/spring-context.xsd">
+
+
+    <!-- 配置数据源 -->
+    <bean name="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+        <property name="url" value="jdbc:mysql://localhost:3306/shard_jdbc" />
+        <property name="username" value="root" />
+        <property name="password" value="root" />
+    </bean>
+
+
+    <!-- 构成分库分表的规则 传入数据源集合和每个表的分库分表的具体规则 -->
+    <bean id="shardingRule" class="com.dangdang.ddframe.rdb.sharding.api.rule.ShardingRule">
+        <constructor-arg index="0" ref="dataSourceRule"/>
+        <constructor-arg index="1">
+            <list>
+                <ref bean="orderTableRule"/>
+                <!--<ref bean="studentTableRule"/>-->
+            </list>
+        </constructor-arg>
+        <constructor-arg index="2" ><null/></constructor-arg>
+        <constructor-arg index="3" ref="orderDatabaseShardingStrategy"/>
+        <constructor-arg index="4" ref="orderTableShardingStrategy"/>
+        <constructor-arg index="5" ><null/></constructor-arg>
+
+    </bean>
+
+    <!-- 对datasource进行封装 -->
+    <bean id="shardingDataSource" class="com.dangdang.ddframe.rdb.sharding.api.ShardingDataSourceFactory" factory-method="createDataSource">
+        <constructor-arg ref="shardingRule"/>
+    </bean>
+
+    <!-- 配置事务管理器 -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="shardingDataSource" />
+    </bean>
+
+
+    <!-- 配置好dataSourceRule，即对数据源进行管理，这里 仅使用shardingJDBC 进行分表 所以只配置一个库 -->
+    <bean id="dataSourceRule" class="com.dangdang.ddframe.rdb.sharding.api.rule.DataSourceRule">
+        <constructor-arg>
+            <map>
+                <entry key="sharding_0" value-ref="dataSource"/>
+                <!-- <entry key="sharding_1" value-ref="sharding_1"/>-->
+            </map>
+        </constructor-arg>
+    </bean>
+
+
+    <!-- t_order 分库策略  -->
+    <bean id="orderDatabaseShardingStrategy" class="com.dangdang.ddframe.rdb.sharding.api.strategy.database.DatabaseShardingStrategy">
+        <constructor-arg index="0" value="user_id"/>
+        <constructor-arg index="1" >
+            <!-- 由于只做分表，所以使用 框架提供的不分库策略 NoneDatabaseShardingAlgorithm -->
+            <bean class="com.dangdang.ddframe.rdb.sharding.api.strategy.database.NoneDatabaseShardingAlgorithm"/>
+        </constructor-arg>
+    </bean>
+
+
+    <!-- t_order 分表策略 -->
+    <bean id="orderTableShardingStrategy" class="com.dangdang.ddframe.rdb.sharding.api.strategy.table.TableShardingStrategy">
+        <constructor-arg index="0" value="user_id"/>
+        <constructor-arg index="1">
+            <bean class="com.jiang.sharding.config.UserOrderSingleKeyShardingAlgorithm" />
+        </constructor-arg>
+    </bean>
+
+    <!-- 对t_user表的配置，进行分库配置，逻辑表名为t_user，每个库有实际的三张表 -->
+    <bean id="orderTableRule" class="com.dangdang.ddframe.rdb.sharding.api.rule.TableRule">
+        <constructor-arg index="0" value="t_order"/>
+        <constructor-arg index="1" value="true"/>
+        <constructor-arg index="2">
+            <list>
+                <value>t_order_0</value>
+                <value>t_order_1</value>
+                <value>t_order_2</value>
+                <value>t_order_3</value>
+            </list>
+        </constructor-arg>
+        <constructor-arg index="3" ref="dataSourceRule"/>
+        <constructor-arg index="4">
+            <list>
+                <value>shard_jdbc</value>
+            </list>
+        </constructor-arg>
+        <constructor-arg index="5" ref="orderDatabaseShardingStrategy"/> <!-- 只做分表，不实现分库逻辑 也要配置  -->
+        <constructor-arg index="6" ref="orderTableShardingStrategy"/>
+        <constructor-arg index="7" ><null/></constructor-arg>
+        <constructor-arg index="8" ><null/></constructor-arg>
+    </bean>
+
+    <!-- MyBatis 配置文件 -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="shardingDataSource"/>
+        <property name="mapperLocations" value="classpath*:/sqlMap/*.xml"/>
+    </bean>
+
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.jiang.sharding.dao"/>
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+    </bean>
+
+
+
+
+</beans>

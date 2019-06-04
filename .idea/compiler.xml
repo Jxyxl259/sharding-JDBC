@@ -7,6 +7,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="sharding-JDBC" />
+        <module name="sharding-JDBC_Demo" />
       </profile>
     </annotationProcessing>
   </component>
