@@ -11,26 +11,24 @@
                         http://www.springframework.org/schema/context/spring-context.xsd">
 
 
-    <!-- 配置数据源 -->
-    <bean name="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
-        <property name="url" value="jdbc:mysql://localhost:3306/shard_jdbc" />
-        <property name="username" value="root" />
-        <property name="password" value="root" />
-    </bean>
-
-
     <!-- 构成分库分表的规则 传入数据源集合和每个表的分库分表的具体规则 -->
     <bean id="shardingRule" class="com.dangdang.ddframe.rdb.sharding.api.rule.ShardingRule">
+        <!-- 构造函数第一个参数 DataSourceRule dataSourceRule -->
         <constructor-arg index="0" ref="dataSourceRule"/>
+        <!-- 构造函数第二个参数 Collection<TableRule> tableRules -->
         <constructor-arg index="1">
             <list>
                 <ref bean="orderTableRule"/>
                 <!--<ref bean="studentTableRule"/>-->
             </list>
         </constructor-arg>
+        <!-- 构造函数第三个参数 Collection<BindingTableRule> bindingTableRules -->
         <constructor-arg index="2" ><null/></constructor-arg>
+        <!-- 构造函数第四个参数 DatabaseShardingStrategy databaseShardingStrategy -->
         <constructor-arg index="3" ref="orderDatabaseShardingStrategy"/>
+        <!-- 构造函数第五个参数 TableShardingStrategy tableShardingStrategy -->
         <constructor-arg index="4" ref="orderTableShardingStrategy"/>
+        <!-- 构造函数第六个参数 KeyGenerator keyGenerator -->
         <constructor-arg index="5" ><null/></constructor-arg>
 
     </bean>
@@ -77,8 +75,11 @@
 
     <!-- 对t_user表的配置，进行分库配置，逻辑表名为t_user，每个库有实际的三张表 -->
     <bean id="orderTableRule" class="com.dangdang.ddframe.rdb.sharding.api.rule.TableRule">
+        <!-- 构造参数一 String logicTable(逻辑表名) -->
         <constructor-arg index="0" value="t_order"/>
-        <constructor-arg index="1" value="true"/>
+        <!-- 构造参数二 boolean dynamic(？) -->
+        <constructor-arg index="1" value="false"/>
+        <!-- 构造参数三 List<String> actualTables(实际表名) -->
         <constructor-arg index="2">
             <list>
                 <value>t_order_0</value>
@@ -87,15 +88,21 @@
                 <value>t_order_3</value>
             </list>
         </constructor-arg>
+        <!-- 构造参数四 DataSourceRule dataSourceRule(数据源分片规则) -->
         <constructor-arg index="3" ref="dataSourceRule"/>
+        <!-- 构造参数五 Collection<String> dataSourceNames(数据库名) -->
         <constructor-arg index="4">
             <list>
-                <value>shard_jdbc</value>
+                <value>sharding_0</value>
             </list>
         </constructor-arg>
+        <!-- 构造参数六 DatabaseShardingStrategy databaseShardingStrategy(分库策略) -->
         <constructor-arg index="5" ref="orderDatabaseShardingStrategy"/> <!-- 只做分表，不实现分库逻辑 也要配置  -->
+        <!-- 构造参数七 TableShardingStrategy tableShardingStrategy(分表策略) -->
         <constructor-arg index="6" ref="orderTableShardingStrategy"/>
+        <!-- 构造参数八 String generateKeyColumn(自动生成的字段) -->
         <constructor-arg index="7" ><null/></constructor-arg>
+        <!-- 构造参数九 KeyGenerator keyGenerator(主键生成策略)-->
         <constructor-arg index="8" ><null/></constructor-arg>
     </bean>
 
